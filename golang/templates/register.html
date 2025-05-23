@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>注册</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 引入 Bootstrap CSS -->
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.1/css/bootstrap.min.css" rel="stylesheet">
+    <!-- 引入 Vue.js -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14"></script>
+</head>
+<body class="bg-light">
+    <div id="app">
+        <div class="container">
+            <div class="row justify-content-center mt-5">
+                <div class="col-md-6 col-lg-4">
+                    <div class="card shadow-sm">
+                        <div class="card-body p-4">
+                            <h2 class="text-center mb-4">用户注册</h2>
+                            <form @submit.prevent="register">
+                                <div class="mb-3">
+                                    <label for="username" class="form-label">用户名</label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="username" 
+                                           v-model="username" 
+                                           placeholder="请输入用户名"
+                                           required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="password" class="form-label">密码</label>
+                                    <input type="password" 
+                                           class="form-control" 
+                                           id="password" 
+                                           v-model="password" 
+                                           placeholder="请输入密码"
+                                           required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="confirmPassword" class="form-label">确认密码</label>
+                                    <input type="password" 
+                                           class="form-control" 
+                                           id="confirmPassword" 
+                                           v-model="confirmPassword" 
+                                           placeholder="请再次输入密码"
+                                           required>
+                                </div>
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-primary btn-lg">注册</button>
+                                    <a href="/" class="btn btn-outline-secondary btn-lg">返回登录</a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入 Bootstrap Bundle JS (包含 Popper) -->
+    <script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.1/js/bootstrap.bundle.min.js"></script>
+    <script>
+        new Vue({
+            el: '#app',
+            data: {
+                username: '',
+                password: '',
+                confirmPassword: ''
+            },
+            methods: {
+                register() {
+                    if (this.password !== this.confirmPassword) {
+                        alert('两次输入的密码不一致！');
+                        return;
+                    }
+                    // 这里可以添加实际的注册逻辑
+                    alert('注册信息：\n用户名：' + this.username + '\n密码：' + this.password);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
