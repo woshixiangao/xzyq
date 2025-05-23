@@ -50,6 +50,7 @@
 
     <!-- 引入 Bootstrap Bundle JS (包含 Popper) -->
     <script src="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.1/js/bootstrap.bundle.min.js"></script>
+    <!-- 在 login 方法中修改成功处理部分 -->
     <script>
         new Vue({
             el: '#app',
@@ -59,8 +60,27 @@
             },
             methods: {
                 login() {
-                    // 这里可以添加实际的登录逻辑
-                    alert('用户名：' + this.username + '\n密码：' + this.password);
+                    fetch('/api/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            username: this.username,
+                            password: this.password
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            alert(data.error);
+                        } else {
+                            window.location.href = data.redirect || '/home';
+                        }
+                    })
+                    .catch(error => {
+                        alert('登录失败：' + error);
+                    });
                 }
             }
         });

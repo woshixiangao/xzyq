@@ -73,8 +73,29 @@
                         alert('两次输入的密码不一致！');
                         return;
                     }
-                    // 这里可以添加实际的注册逻辑
-                    alert('注册信息：\n用户名：' + this.username + '\n密码：' + this.password);
+                    
+                    fetch('/api/register', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            username: this.username,
+                            password: this.password
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            alert(data.error);
+                        } else {
+                            alert('注册成功！');
+                            window.location.href = '/'; // 跳转到登录页
+                        }
+                    })
+                    .catch(error => {
+                        alert('注册失败：' + error);
+                    });
                 }
             }
         });
