@@ -55,5 +55,24 @@ func InitDB() *sql.DB {
         log.Fatal("创建system_logs索引失败:", err)
     }
 
-	return DB
+    // 创建租户表
+    _, err = DB.Exec(`
+        CREATE TABLE IF NOT EXISTS tenants (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(100) NOT NULL,
+            code VARCHAR(50) NOT NULL UNIQUE,
+            address TEXT,
+            contact_person VARCHAR(50),
+            contact_phone VARCHAR(20),
+            email VARCHAR(100),
+            status BOOLEAN DEFAULT true,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        )
+    `)
+    if err != nil {
+        log.Fatal("创建租户表失败:", err)
+    }
+
+    return DB
 }

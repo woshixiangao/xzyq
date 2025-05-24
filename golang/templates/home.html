@@ -55,6 +55,7 @@
         <!-- 侧边栏 -->
         <div class="sidebar bg-light">
             <div class="position-sticky">
+                <!-- 在侧边栏的导航列表中添加租户管理链接 -->
                 <ul class="nav flex-column">
                     <li class="nav-item">
                         <a class="nav-link" :class="{active: currentView === 'dashboard'}" href="#" @click="switchView('dashboard')">
@@ -64,6 +65,12 @@
                     <li class="nav-item">
                         <a class="nav-link" :class="{active: currentView === 'users'}" href="#" @click="switchView('users')">
                             <i class="bi bi-person"></i> 用户管理
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/tenants">
+                            <span data-feather="users"></span>
+                            租户管理
                         </a>
                     </li>
                     <li class="nav-item">

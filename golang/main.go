@@ -78,6 +78,17 @@ func main() {
         authorized.PUT("/api/users/:username/password", func(c *gin.Context) {
             utils.UpdateUserPassword(c, db)
         })
+
+        // 添加租户管理页面路由
+        authorized.GET("/tenants", func(c *gin.Context) {
+            c.HTML(http.StatusOK, "tenants.html", gin.H{})
+        })
+
+        // 租户管理API
+        authorized.GET("/api/tenants", utils.GetTenantList)
+        authorized.POST("/api/tenants", utils.AddTenant)
+        authorized.PUT("/api/tenants/:id", utils.UpdateTenant)
+        authorized.DELETE("/api/tenants/:id", utils.DeleteTenant)
     }
 
     // 启动服务器
