@@ -1,69 +1,16 @@
 package main
 
 import (
-	"database/sql"
-	"fmt"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
-	_ "github.com/lib/pq"
 	"github.com/xzyq/golang/utils"
-	"log"
 	"net/http"
 )
 
-var db *sql.DB
-
-func initDB() {
-	// 使用 PostgreSQL URL 格式
-	connStr := "postgresql://myuser:mysecretpassword@47.121.141.235:5432/postgres?sslmode=disable"
-	
-	var err error
-	db, err = sql.Open("postgres", connStr)
-	if err != nil {
-		log.Fatal("数据库连接失败:", err)
-	}
-
-	// 测试连接
-	err = db.Ping()
-	if err != nil {
-		log.Fatal("数据库连接测试失败:", err)
-	}
-
-	fmt.Println("数据库连接成功！")
-	
-	// 初始化日志器
-	utils.InitLogger(db)
-
-    // 创建system_logs表
-    _, err = db.Exec(`
-        CREATE TABLE IF NOT EXISTS system_logs (
-            id SERIAL PRIMARY KEY,
-            level VARCHAR(10) NOT NULL,
-            component VARCHAR(50) NOT NULL,
-            message TEXT NOT NULL,
-            metadata JSONB,
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-        )
-    `)
-    if err != nil {
-        log.Fatal("创建system_logs表失败:", err)
-    }
-
-    // 创建索引以提高查询性能
-    _, err = db.Exec(`
-        CREATE INDEX IF NOT EXISTS idx_system_logs_level ON system_logs(level);
-        CREATE INDEX IF NOT EXISTS idx_system_logs_created_at ON system_logs(created_at);
-        CREATE INDEX IF NOT EXISTS idx_system_logs_component ON system_logs(component)
-    `)
-    if err != nil {
-        log.Fatal("创建system_logs索引失败:", err)
-    }
-}
-
 func main() {
     // 初始化数据库连接
-    initDB()
+    db := utils.InitDB()
     defer db.Close()
 
     r := gin.Default()
