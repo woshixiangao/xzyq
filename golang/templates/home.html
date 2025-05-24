@@ -8,6 +8,22 @@
     <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.1/css/bootstrap.min.css" rel="stylesheet">
     <!-- 引入 Vue.js -->
     <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14"></script>
+    <style>
+        .sidebar {
+            position: fixed;
+            top: 56px;
+            bottom: 0;
+            left: 0;
+            width: 200px;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .main-content {
+            margin-left: 200px;
+            margin-top: 56px;
+            padding: 20px;
+        }
+    </style>
 </head>
 <body>
     <div id="app">
@@ -21,7 +37,7 @@
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav me-auto">
                         <li class="nav-item">
-                            <a class="nav-link active" href="#">首页</a>
+                            <a class="nav-link" :class="{active: currentView === 'dashboard'}" href="#" @click="switchView('dashboard')">首页</a>
                         </li>
                     </ul>
                     <ul class="navbar-nav">
@@ -41,18 +57,18 @@
             <div class="position-sticky">
                 <ul class="nav flex-column">
                     <li class="nav-item">
-                        <a class="nav-link active" href="#">
+                        <a class="nav-link" :class="{active: currentView === 'dashboard'}" href="#" @click="switchView('dashboard')">
                             <i class="bi bi-house"></i> 控制台
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#">
+                        <a class="nav-link" :class="{active: currentView === 'users'}" href="#" @click="switchView('users')">
                             <i class="bi bi-person"></i> 用户管理
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#">
-                            <i class="bi bi-gear"></i> 系统设置
+                        <a class="nav-link" :class="{active: currentView === 'logs'}" href="#" @click="switchView('logs')">
+                            <i class="bi bi-journal-text"></i> 日志管理
                         </a>
                     </li>
                 </ul>
@@ -62,10 +78,118 @@
         <!-- 主要内容区域 -->
         <main class="main-content">
             <div class="container-fluid">
-                <h1 class="mt-4">欢迎来到管理系统</h1>
-                <p>这里是系统的主页内容。</p>
+                <!-- 控制台视图 -->
+                <div v-if="currentView === 'dashboard'">
+                    <h1 class="mt-4">欢迎来到管理系统</h1>
+                    <p>这里是系统的主页内容。</p>
+                </div>
+
+                <!-- 用户管理视图 -->
+                <div v-if="currentView === 'users'">
+                    <h2 class="mb-4">用户管理</h2>
+                    <div class="mb-3">
+                        <button class="btn btn-primary" @click="showAddUserModal">添加用户</button>
+                    </div>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>用户名</th>
+                                <th>创建时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="user in users" :key="user.username">
+                                <td>${user.username}</td>
+                                <td>${user.created_at}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-warning me-2" @click="showEditUserModal(user)">编辑</button>
+                                    <button class="btn btn-sm btn-danger" @click="deleteUser(user)">删除</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 日志管理视图 -->
+                <div v-if="currentView === 'logs'">
+                    <h2 class="mb-4">日志管理</h2>
+                    <div class="mb-3">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <select class="form-select" v-model="logFilter.level">
+                                    <option value="">所有级别</option>
+                                    <option value="info">信息</option>
+                                    <option value="error">错误</option>
+                                    <option value="db">数据库</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="date" class="form-control" v-model="logFilter.date">
+                            </div>
+                            <div class="col-md-4">
+                                <input type="text" class="form-control" v-model="logFilter.keyword" placeholder="搜索关键词">
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-primary w-100" @click="searchLogs">搜索</button>
+                            </div>
+                        </div>
+                    </div>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>时间</th>
+                                <th>级别</th>
+                                <th>组件</th>
+                                <th>消息</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="log in logs" :key="log.id">
+                                <td>${log.created_at}</td>
+                                <td>
+                                    <span :class="{
+                                        'badge bg-info': log.level === 'info',
+                                        'badge bg-danger': log.level === 'error',
+                                        'badge bg-primary': log.level === 'db'
+                                    }">${log.level}</span>
+                                </td>
+                                <td>${log.component}</td>
+                                <td>${log.message}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </main>
+
+        <!-- 添加/编辑用户模态框 -->
+        <div class="modal fade" id="userModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">${isEditing ? '编辑用户' : '添加用户'}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form @submit.prevent="saveUser">
+                            <div class="mb-3">
+                                <label class="form-label">用户名</label>
+                                <input type="text" class="form-control" v-model="userForm.username" :disabled="isEditing">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">密码</label>
+                                <input type="password" class="form-control" v-model="userForm.password">
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="button" class="btn btn-primary" @click="saveUser">保存</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- 引入 Bootstrap Bundle JS (包含 Popper) -->
@@ -73,13 +197,107 @@
     <script>
         new Vue({
             el: '#app',
-            delimiters: ['${', '}'], // 修改 Vue 的分隔符
+            delimiters: ['${', '}'],
             data: {
-                username: {{.username}}
+                username: {{.username}},
+                currentView: 'dashboard',
+                users: [],
+                logs: [],
+                isEditing: false,
+                userForm: {
+                    username: '',
+                    password: ''
+                },
+                logFilter: {
+                    level: '',
+                    date: '',
+                    keyword: ''
+                }
             },
             methods: {
+                switchView(view) {
+                    this.currentView = view;
+                    if (view === 'users') {
+                        this.loadUsers();
+                    } else if (view === 'logs') {
+                        this.loadLogs();
+                    }
+                },
+                loadUsers() {
+                    fetch('/api/users')
+                        .then(response => response.json())
+                        .then(data => {
+                            this.users = data;
+                        })
+                        .catch(error => {
+                            alert('加载用户列表失败：' + error);
+                        });
+                },
+                showAddUserModal() {
+                    this.isEditing = false;
+                    this.userForm = {
+                        username: '',
+                        password: ''
+                    };
+                    new bootstrap.Modal(document.getElementById('userModal')).show();
+                },
+                showEditUserModal(user) {
+                    this.isEditing = true;
+                    this.userForm = {
+                        username: user.username,
+                        password: ''
+                    };
+                    new bootstrap.Modal(document.getElementById('userModal')).show();
+                },
+                saveUser() {
+                    const url = this.isEditing ? `/api/users/${this.userForm.username}` : '/api/users';
+                    const method = this.isEditing ? 'PUT' : 'POST';
+                    
+                    fetch(url, {
+                        method: method,
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(this.userForm)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        bootstrap.Modal.getInstance(document.getElementById('userModal')).hide();
+                        this.loadUsers();
+                    })
+                    .catch(error => {
+                        alert(this.isEditing ? '更新用户失败：' : '添加用户失败：' + error);
+                    });
+                },
+                deleteUser(user) {
+                    if (confirm(`确定要删除用户 ${user.username} 吗？`)) {
+                        fetch(`/api/users/${user.username}`, {
+                            method: 'DELETE'
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            this.loadUsers();
+                        })
+                        .catch(error => {
+                            alert('删除用户失败：' + error);
+                        });
+                    }
+                },
+                loadLogs() {
+                    const queryParams = new URLSearchParams(this.logFilter).toString();
+                    fetch(`/api/logs?${queryParams}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            this.logs = data;
+                        })
+                        .catch(error => {
+                            alert('加载日志失败：' + error);
+                        });
+                },
+                searchLogs() {
+                    this.loadLogs();
+                },
                 logout() {
-                    // 实现登出功能
                     fetch('/api/logout', {
                         method: 'POST',
                         credentials: 'include'
