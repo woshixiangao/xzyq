@@ -53,6 +53,10 @@ func main() {
 		protected.GET("/users/:id", handlers.GetUser)
 		protected.PUT("/users/:id", handlers.UpdateUser)
 		protected.DELETE("/users/:id", handlers.DeleteUser)
+
+		// 个人资料相关路由
+		protected.GET("/user/profile", handlers.GetProfile)
+		protected.PUT("/user/profile", handlers.UpdateProfile)
 	}
 
 	// 管理员路由

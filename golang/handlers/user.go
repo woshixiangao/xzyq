@@ -181,3 +181,82 @@ func DeleteUser(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "User deleted successfully"})
 }
+
+// GetProfile 获取当前用户的个人资料
+func GetProfile(c *gin.Context) {
+	// 从上下文中获取用户ID
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+		return
+	}
+
+	// 查询用户信息
+	var user models.User
+	if err := database.DB.First(&user, userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}
+
+// UpdateProfile 更新当前用户的个人资料
+func UpdateProfile(c *gin.Context) {
+	// 从上下文中获取用户ID
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+		return
+	}
+
+	// 查询用户信息
+	var user models.User
+	if err := database.DB.First(&user, userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	// 绑定更新数据
+	var updateData struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+		Email    string `json:"email"`
+		Phone    string `json:"phone"`
+	}
+
+	if err := c.ShouldBindJSON(&updateData); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid update data"})
+		return
+	}
+
+	// 如果要更新用户名，检查是否已存在
+	if updateData.Username != "" && updateData.Username != user.Username {
+		var existingUser models.User
+		result := database.DB.Where("username = ?", updateData.Username).First(&existingUser)
+		if result.RowsAffected > 0 {
+			c.JSON(http.StatusConflict, gin.H{"error": "Username already exists"})
+			return
+		}
+		user.Username = updateData.Username
+	}
+
+	// 更新其他信息
+	if updateData.Password != "" {
+		user.Password = updateData.Password
+	}
+	if updateData.Email != "" {
+		user.Email = updateData.Email
+	}
+	if updateData.Phone != "" {
+		user.Phone = updateData.Phone
+	}
+
+	// 保存更新
+	if err := database.DB.Save(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile"})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}
