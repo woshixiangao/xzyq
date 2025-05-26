@@ -8,7 +8,6 @@ import (
 	"xzyq/utils"
 
 	"github.com/gin-gonic/gin"
-	"golang.org/x/crypto/bcrypt"
 )
 
 // RegisterUser 注册新用户
@@ -28,14 +27,6 @@ func RegisterUser(c *gin.Context) {
 		c.JSON(http.StatusConflict, gin.H{"error": "Username already exists"})
 		return
 	}
-
-	// 加密密码
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process password"})
-		return
-	}
-	user.Password = string(hashedPassword)
 
 	// 创建用户
 	if err := database.DB.Create(&user).Error; err != nil {
@@ -71,9 +62,8 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	// 验证密码
-	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginData.Password))
-	if err != nil {
+	// 验证密码 - 直接比较原文
+	if user.Password != loginData.Password {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
 	}
@@ -88,7 +78,6 @@ func Login(c *gin.Context) {
 	// 更新最后登录时间
 	user.LastLoginAt = time.Now()
 	database.DB.Save(&user)
-
 
 	// 记录登录日志
 	log := models.Log{
