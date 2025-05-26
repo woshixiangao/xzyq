@@ -29,13 +29,9 @@
           background-color="#545c64"
           text-color="#fff"
           active-text-color="#ffd04b">
-          <el-menu-item index="1">
-            <el-icon><icon-menu /></el-icon>
-            <span>导航一</span>
-          </el-menu-item>
-          <el-menu-item index="2">
-            <el-icon><icon-menu /></el-icon>
-            <span>导航二</span>
+          <el-menu-item index="/users" @click="router.push('/users')">
+            <el-icon><User /></el-icon>
+            <span>用户管理</span>
           </el-menu-item>
         </el-menu>
       </el-aside>
@@ -77,8 +73,8 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import axios from 'axios'
 import {
-  Menu as IconMenu,
-  ArrowDown
+  ArrowDown,
+  User
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
