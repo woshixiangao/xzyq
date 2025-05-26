@@ -16,7 +16,7 @@ func main() {
 
 	// 自动迁移数据库表
 	db := database.GetDB()
-	db.AutoMigrate(&models.User{}, &models.Log{})
+	db.AutoMigrate(&models.User{}, &models.Log{}, &models.Organization{})
 
 	// 创建Gin路由
 	r := gin.Default()
@@ -57,13 +57,20 @@ func main() {
 		// 个人资料相关路由
 		protected.GET("/user/profile", handlers.GetProfile)
 		protected.PUT("/user/profile", handlers.UpdateProfile)
+
+		// 组织管理路由
+		protected.GET("/organizations", handlers.GetOrganizations)
+		protected.GET("/organizations/:id", handlers.GetOrganization)
+		protected.POST("/organizations", handlers.CreateOrganization)
+		protected.PUT("/organizations/:id", handlers.UpdateOrganization)
+		protected.DELETE("/organizations/:id", handlers.DeleteOrganization)
 	}
 
 	// 管理员路由
 	admin := protected.Group("/admin")
 	admin.Use(middleware.AdminAuthMiddleware())
 	{
-		// 添加管理员特有的路由
+		// 这里可以添加管理员特有的路由
 	}
 
 	// 启动服务器
