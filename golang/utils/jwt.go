@@ -12,6 +12,7 @@ var jwtSecret = []byte("xzyq_secret_key")
 // Claims 自定义JWT claims结构
 type Claims struct {
 	UserID   uint   `json:"user_id"`
+	OrgID    uint   `json:"org_id"`
 	Username string `json:"username"`
 	Role     string `json:"role"`
 	jwt.RegisteredClaims

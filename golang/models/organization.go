@@ -9,6 +9,8 @@ type Organization struct {
 	ID          uint      `gorm:"primarykey" json:"id"`
 	Name        string    `gorm:"type:varchar(100);unique;not null" json:"name"`
 	Description string    `gorm:"type:text" json:"description"`
+	ParentID    *uint     `gorm:"default:null" json:"parent_id"`
+	CreatedBy   uint      `json:"created_by"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }

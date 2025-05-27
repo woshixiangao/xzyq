@@ -34,11 +34,26 @@ func GetOrganization(c *gin.Context) {
 
 // CreateOrganization 创建组织
 func CreateOrganization(c *gin.Context) {
+	// 从上下文中获取用户ID
+	userID, exists := c.Get("userID")
+	orgID, exists := c.Get("OrgId")
+
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "未授权的操作"})
+		return
+	}
+
 	var organization models.Organization
 	if err := c.ShouldBindJSON(&organization); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的请求数据"})
 		return
 	}
+
+	// 设置创建者ID
+	organization.CreatedBy = userID.(uint)
+	// 将 orgID 转换为指针类型
+	parentID := orgID.(uint)
+	organization.ParentID = &parentID
 
 	result := database.DB.Create(&organization)
 	if result.Error != nil {
