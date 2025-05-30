@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"xzyq/database"
 	"xzyq/models"
@@ -10,14 +11,36 @@ import (
 
 // GetOrganizations 获取所有组织
 func GetOrganizations(c *gin.Context) {
-	var organizations []models.Organization
+	type OrgWithUserCount struct {
+		models.Organization
+		UserCount int64 `json:"user_count"`
+	}
+
+	var orgsWithCount []OrgWithUserCount
 	db := database.GetDB()
-	result := db.Find(&organizations)
-	if result.Error != nil {
+
+	// 查询所有组织
+	var organizations []models.Organization
+	if err := db.Find(&organizations).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取组织列表失败"})
 		return
 	}
-	c.JSON(http.StatusOK, organizations)
+
+	// 为每个组织统计用户数量，包括软删除的用户
+	for _, org := range organizations {
+		var count int64
+		if err := db.Unscoped().Model(&models.User{}).Where("org_id = ?", org.ID).Count(&count).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "统计用户数量失败"})
+			return
+		}
+
+		orgsWithCount = append(orgsWithCount, OrgWithUserCount{
+			Organization: org,
+			UserCount:    count,
+		})
+	}
+
+	c.JSON(http.StatusOK, orgsWithCount)
 }
 
 // GetOrganization 获取单个组织
@@ -133,17 +156,58 @@ func UpdateOrganization(c *gin.Context) {
 // DeleteOrganization 删除组织
 func DeleteOrganization(c *gin.Context) {
 	id := c.Param("id")
+
+	// 开启事务
+	tx := database.DB.Begin()
+
+	// 查找组织
 	var organization models.Organization
-	if err := database.DB.First(&organization, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "组织不存在"})
+	if err := tx.First(&organization, id).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusNotFound, gin.H{"error": fmt.Sprintf("组织(ID:%s)不存在", id)})
 		return
 	}
 
-	result := database.DB.Delete(&organization)
-	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除组织失败"})
+	// 查找该组织下的用户数量
+	var userCount int64
+	if err := tx.Model(&models.User{}).Where("org_id = ?", organization.ID).Count(&userCount).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("查询组织(ID:%d)的用户数量失败: %v", organization.ID, err)})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "组织已删除"})
+	// 如果组织下还有用户，则不允许删除
+	if userCount > 0 {
+		tx.Rollback()
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": fmt.Sprintf("无法删除组织[%s]，该组织下还有 %d 个用户", organization.Name, userCount),
+		})
+		return
+	}
+
+	// 删除组织相关的所有数据
+	// 1. 删除组织下的用户（虽然已经确认数量为0，但为了保险起见）
+	if err := tx.Where("org_id = ?", organization.ID).Delete(&models.User{}).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("删除组织[%s]的用户数据失败: %v", organization.Name, err)})
+		return
+	}
+
+	// 2. 删除组织本身
+	if err := tx.Delete(&organization).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("删除组织[%s]失败: %v", organization.Name, err)})
+		return
+	}
+
+	// 提交事务
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("删除组织[%s]时提交事务失败: %v", organization.Name, err)})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": fmt.Sprintf("组织[%s]及其相关数据已成功删除", organization.Name),
+	})
 }

@@ -19,10 +19,10 @@ type User struct {
 	Phone       string        `gorm:"size:20" json:"phone"`
 	LastLoginAt time.Time     `json:"last_login_at"`
 	IsActive    bool          `gorm:"default:true" json:"is_active"`
-	Role        string        `gorm:"size:20;default:'user'" json:"role"` // admin或user
-	OrgID       *uint         `json:"org_id"`                             // 组织ID
-	Org         *Organization `gorm:"foreignKey:OrgID" json:"org"`        // 组织关联
-	CreatedBy   uint          `json:"created_by"`                         // 创建者ID
+	Role        string        `gorm:"size:20;default:'user'" json:"role"`                                     // admin或user
+	OrgID       *uint         `gorm:"index;default:null" json:"org_id"`                                       // 组织ID
+	Org         *Organization `gorm:"foreignKey:OrgID;references:ID;constraint:OnDelete:SET NULL" json:"org"` // 组织关联
+	CreatedBy   uint          `json:"created_by"`                                                             // 创建者ID
 }
 
 // TableName 指定表名

@@ -16,11 +16,22 @@ func main() {
 
 	// 自动迁移数据库表
 	db := database.GetDB()
+
+	// 删除现有的外键约束
+	if err := db.Migrator().DropConstraint(&models.User{}, "fk_users_org"); err != nil {
+		log.Printf("删除外键约束失败: %v", err)
+	}
+
+	// 自动迁移数据库表
 	db.AutoMigrate(&models.User{}, &models.Log{}, &models.Organization{})
 
-	// 添加组织ID外键
-	if err := db.Migrator().HasColumn(&models.User{}, "org_id"); !err {
-		db.Migrator().AddColumn(&models.User{}, "org_id")
+	// 手动添加外键约束
+	if err := db.Exec(`ALTER TABLE users 
+		ADD CONSTRAINT fk_users_org 
+		FOREIGN KEY (org_id) 
+		REFERENCES organization(id) 
+		ON DELETE SET NULL`).Error; err != nil {
+		log.Printf("添加外键约束失败: %v", err)
 	}
 
 	// 创建Gin路由

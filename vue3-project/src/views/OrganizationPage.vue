@@ -9,6 +9,11 @@
     <el-table :data="organizations" style="width: 100%">
       <el-table-column prop="id" label="ID" width="80" />
       <el-table-column prop="name" label="组织名称" />
+      <el-table-column prop="user_count" label="用户数量" width="100">
+        <template #default="{ row }">
+          <el-tag>{{ row.user_count }}</el-tag>
+        </template>
+      </el-table-column>
       <el-table-column prop="description" label="描述" />
       <el-table-column prop="created_at" label="创建时间" width="180" />
       <el-table-column label="操作" width="200">
@@ -142,25 +147,39 @@ export default {
     // 删除组织
     const handleDelete = async (id) => {
       try {
+        const row = organizations.value.find(org => org.id === id)
+        if (row.user_count > 0) {
+          ElMessage.warning(`该组织下还有 ${row.user_count} 个用户，不能删除`)
+          return
+        }
+
         await ElMessageBox.confirm('确定要删除这个组织吗？', '提示', {
           type: 'warning'
         })
         const token = localStorage.getItem('token')
-        await axios.delete(`/api/organizations/${id}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        })
-        ElMessage.success('删除成功')
-        fetchOrganizations()
-      } catch (error) {
-        if (error !== 'cancel') {
-          if (error.response && error.response.status === 401) {
+        try {
+          await axios.delete(`/api/organizations/${id}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          })
+          ElMessage.success('删除成功')
+          fetchOrganizations()
+        } catch (error) {
+          console.error('Delete error:', error.response)
+          if (error.response?.status === 401) {
             ElMessage.error('登录已过期，请重新登录')
             router.push('/login')
+          } else if (error.response?.data?.error) {
+            ElMessage.error(error.response.data.error)
           } else {
-            ElMessage.error('删除失败')
+            ElMessage.error('删除组织失败，请稍后重试')
           }
+        }
+      } catch (error) {
+        // 用户取消删除操作，不需要提示错误
+        if (error !== 'cancel') {
+          ElMessage.error('操作取消')
         }
       }
     }
