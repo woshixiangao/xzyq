@@ -10,6 +10,11 @@
       <el-table-column prop="id" label="ID" width="80" />
       <el-table-column prop="username" label="用户名" width="120" />
       <el-table-column prop="email" label="邮箱" width="180" />
+      <el-table-column label="所属组织" width="150">
+        <template #default="{ row }">
+          <span>{{ row.org?.name || '-' }}</span>
+        </template>
+      </el-table-column>
       <el-table-column prop="phone" label="手机号" width="120" />
       <el-table-column prop="role" label="角色" width="100">
         <template #default="{ row }">
@@ -62,6 +67,11 @@
         <el-form-item label="状态" prop="is_active">
           <el-switch v-model="userForm.is_active" />
         </el-form-item>
+        <el-form-item label="所属组织" prop="org_id">
+          <el-select v-model="userForm.org_id" placeholder="请选择组织">
+            <el-option v-for="org in organizations" :key="org.id" :label="org.name" :value="org.id" />
+          </el-select>
+        </el-form-item>
       </el-form>
       <template #footer>
         <span class="dialog-footer">
@@ -81,6 +91,7 @@ import axios from 'axios'
 // 数据列表
 const users = ref([])
 const loading = ref(false)
+const organizations = ref([])
 
 // 对话框控制
 const dialogVisible = ref(false)

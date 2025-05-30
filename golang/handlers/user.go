@@ -28,6 +28,15 @@ func RegisterUser(c *gin.Context) {
 		return
 	}
 
+	// 如果指定了组织ID，检查组织是否存在
+	if user.OrgID != nil {
+		var org models.Organization
+		if err := database.DB.First(&org, *user.OrgID).Error; err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Organization not found"})
+			return
+		}
+	}
+
 	// 创建用户
 	if err := database.DB.Create(&user).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
@@ -123,7 +132,7 @@ func Logout(c *gin.Context) {
 // GetUsers 获取用户列表
 func GetUsers(c *gin.Context) {
 	var users []models.User
-	if err := database.DB.Find(&users).Error; err != nil {
+	if err := database.DB.Preload("Org").Find(&users).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch users"})
 		return
 	}
@@ -161,11 +170,23 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 
+	// 如果指定了组织ID，检查组织是否存在
+	if updateData.OrgID != nil {
+		var org models.Organization
+		if err := database.DB.First(&org, *updateData.OrgID).Error; err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Organization not found"})
+			return
+		}
+	}
+
 	// 更新用户信息
 	if err := database.DB.Model(&user).Updates(updateData).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
 		return
 	}
+
+	// 重新查询用户信息以获取关联的组织数据
+	database.DB.Preload("Org").First(&user, id)
 
 	c.JSON(http.StatusOK, user)
 }

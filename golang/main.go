@@ -18,6 +18,11 @@ func main() {
 	db := database.GetDB()
 	db.AutoMigrate(&models.User{}, &models.Log{}, &models.Organization{})
 
+	// 添加组织ID外键
+	if err := db.Migrator().HasColumn(&models.User{}, "org_id"); !err {
+		db.Migrator().AddColumn(&models.User{}, "org_id")
+	}
+
 	// 创建Gin路由
 	r := gin.Default()
 

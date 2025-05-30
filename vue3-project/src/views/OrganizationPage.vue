@@ -49,12 +49,14 @@
 
 <script>
 import { ref, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'  // 添加ElMessageBox导入
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { useRouter } from 'vue-router'
 import axios from 'axios'
 
 export default {
   name: 'OrganizationPage',
   setup() {
+    const router = useRouter()
     const organizations = ref([])
     const dialogVisible = ref(false)
     const dialogTitle = ref('')
@@ -67,10 +69,20 @@ export default {
     // 获取组织列表
     const fetchOrganizations = async () => {
       try {
-        const response = await axios.get('/api/organizations')
+        const token = localStorage.getItem('token')
+        const response = await axios.get('/api/organizations', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
         organizations.value = response.data
       } catch (error) {
-        ElMessage.error('获取组织列表失败')
+        if (error.response && error.response.status === 401) {
+          ElMessage.error('登录已过期，请重新登录')
+          router.push('/login')
+        } else {
+          ElMessage.error('获取组织列表失败')
+        }
       }
     }
 
@@ -95,19 +107,35 @@ export default {
     // 提交表单
     const handleSubmit = async () => {
       try {
+        const token = localStorage.getItem('token')
         if (form.value.id) {
           // 编辑
-          await axios.put(`/api/organizations/${form.value.id}`, form.value)
+          await axios.put(`/api/organizations/${form.value.id}`, form.value, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          })
           ElMessage.success('更新成功')
         } else {
           // 创建
-          await axios.post('/api/organizations', form.value)
+          const response = await axios.post('/api/organizations', form.value, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          })
           ElMessage.success('创建成功')
+          // 显示管理员账号信息
+          ElMessage.info(`管理员账号：${response.data.admin_user.username}\n初始密码：${response.data.admin_user.password}`)
         }
         dialogVisible.value = false
         fetchOrganizations()
       } catch (error) {
-        ElMessage.error(form.value.id ? '更新失败' : '创建失败')
+        if (error.response && error.response.status === 401) {
+          ElMessage.error('登录已过期，请重新登录')
+          router.push('/login')
+        } else {
+          ElMessage.error(form.value.id ? '更新失败' : '创建失败')
+        }
       }
     }
 
@@ -117,12 +145,22 @@ export default {
         await ElMessageBox.confirm('确定要删除这个组织吗？', '提示', {
           type: 'warning'
         })
-        await axios.delete(`/api/organizations/${id}`)
+        const token = localStorage.getItem('token')
+        await axios.delete(`/api/organizations/${id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
         ElMessage.success('删除成功')
         fetchOrganizations()
       } catch (error) {
         if (error !== 'cancel') {
-          ElMessage.error('删除失败')
+          if (error.response && error.response.status === 401) {
+            ElMessage.error('登录已过期，请重新登录')
+            router.push('/login')
+          } else {
+            ElMessage.error('删除失败')
+          }
         }
       }
     }
