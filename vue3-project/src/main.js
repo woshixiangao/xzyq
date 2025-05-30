@@ -7,7 +7,7 @@ import 'element-plus/dist/index.css'
 import axios from 'axios'
 
 // 配置axios默认值
-axios.defaults.baseURL = 'http://localhost:8080'
+axios.defaults.baseURL = ''  // 使用相对路径，让代理接管请求
 
 // 添加请求拦截器
 axios.interceptors.request.use(

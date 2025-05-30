@@ -23,7 +23,7 @@ func main() {
 	}
 
 	// 自动迁移数据库表
-	db.AutoMigrate(&models.User{}, &models.Log{}, &models.Organization{})
+	db.AutoMigrate(&models.User{}, &models.Log{}, &models.Organization{}, &models.ObjectClass{})
 
 	// 手动添加外键约束
 	if err := db.Exec(`ALTER TABLE users 
@@ -83,6 +83,13 @@ func main() {
 		protected.POST("/organizations", handlers.CreateOrganization)
 		protected.PUT("/organizations/:id", handlers.UpdateOrganization)
 		protected.DELETE("/organizations/:id", handlers.DeleteOrganization)
+
+		// 对象类管理路由
+		protected.GET("/object-classes", handlers.GetObjectClasses)
+		protected.GET("/object-classes/:id", handlers.GetObjectClass)
+		protected.POST("/object-classes", handlers.CreateObjectClass)
+		protected.PUT("/object-classes/:id", handlers.UpdateObjectClass)
+		protected.DELETE("/object-classes/:id", handlers.DeleteObjectClass)
 	}
 
 	// 管理员路由

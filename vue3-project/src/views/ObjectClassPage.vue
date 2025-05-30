@@ -11,11 +11,6 @@
       <el-table-column prop="name" label="名称" width="150" />
       <el-table-column prop="description" label="描述" show-overflow-tooltip />
       <el-table-column prop="organization.name" label="所属组织" width="150" />
-      <el-table-column prop="parent_class.name" label="父类" width="150">
-        <template #default="{ row }">
-          {{ row.parent_class?.name || '-' }}
-        </template>
-      </el-table-column>
       <el-table-column prop="created_by_user.username" label="创建人" width="120" />
       <el-table-column prop="updated_at" label="更新时间" width="180">
         <template #default="{ row }">
@@ -50,27 +45,6 @@
         <el-form-item label="描述" prop="description">
           <el-input v-model="form.description" type="textarea" />
         </el-form-item>
-        <el-form-item label="所属组织" prop="org_id" :rules="[{ required: true, message: '请选择组织' }]">
-          <el-select v-model="form.org_id" placeholder="请选择组织">
-            <el-option
-              v-for="org in organizations"
-              :key="org.id"
-              :label="org.name"
-              :value="org.id"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="父类" prop="parent_class_id">
-          <el-select v-model="form.parent_class_id" placeholder="请选择父类" clearable>
-            <el-option
-              v-for="cls in objectClasses"
-              :key="cls.id"
-              :label="cls.name"
-              :value="cls.id"
-              :disabled="dialogType === 'edit' && cls.id === currentId"
-            />
-          </el-select>
-        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
@@ -101,8 +75,6 @@ export default {
     const form = ref({
       name: '',
       description: '',
-      org_id: null,
-      parent_class_id: null
     })
 
     // 获取对象类列表
@@ -143,8 +115,6 @@ export default {
       form.value = {
         name: '',
         description: '',
-        org_id: null,
-        parent_class_id: null
       }
       dialogVisible.value = true
     }
@@ -156,8 +126,6 @@ export default {
       form.value = {
         name: row.name,
         description: row.description,
-        org_id: row.org_id,
-        parent_class_id: row.parent_class_id
       }
       dialogVisible.value = true
     }
