@@ -32,6 +32,12 @@ const routes = [
         name: 'OrganizationDetail',
         component: () => import('../views/OrganizationDetailPage.vue'),
         meta: { requiresAuth: true }
+      },
+      {
+        path: 'object-classes',
+        name: 'ObjectClasses',
+        component: () => import('../views/ObjectClassPage.vue'),
+        meta: { requiresAuth: true }
       }
     ]
   }
