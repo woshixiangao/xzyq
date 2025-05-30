@@ -73,6 +73,7 @@ func main() {
 		// 个人资料相关路由
 		protected.GET("/user/profile", handlers.GetProfile)
 		protected.PUT("/user/profile", handlers.UpdateProfile)
+		protected.PUT("/user/change-password", handlers.ChangePassword)
 
 		// 组织管理路由
 		protected.GET("/organizations", handlers.GetOrganizations)

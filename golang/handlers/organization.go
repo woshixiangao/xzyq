@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"xzyq/database"
 	"xzyq/models"
+	"xzyq/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -123,6 +124,15 @@ func CreateOrganization(c *gin.Context) {
 		c.JSON(http.StatusConflict, gin.H{"error": "管理员用户名已存在"})
 		return
 	}
+
+	// 对管理员密码进行加密
+	hashedPassword, err := utils.HashPassword(adminUser.Password)
+	if err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
+		return
+	}
+	adminUser.Password = hashedPassword
 
 	// 创建管理员用户
 	if err := tx.Create(&adminUser).Error; err != nil {

@@ -38,6 +38,14 @@ func RegisterUser(c *gin.Context) {
 		}
 	}
 
+	// 对密码进行加密
+	hashedPassword, err := utils.HashPassword(user.Password)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
+		return
+	}
+	user.Password = hashedPassword
+
 	// 创建用户
 	if err := database.DB.Create(&user).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
@@ -60,34 +68,67 @@ func Login(c *gin.Context) {
 
 	// 绑定JSON数据
 	if err := c.ShouldBindJSON(&loginData); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid login data"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请输入用户名和密码"})
 		return
 	}
 
-	// 查找用户
+	// 查找用户（包括软删除的用户）
 	var user models.User
-	result := database.DB.Where("username = ?", loginData.Username).First(&user)
+	result := database.DB.Unscoped().Where("username = ?", loginData.Username).First(&user)
 	if result.Error != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		fmt.Printf("用户登录失败: %s, 错误: %v\n", loginData.Username, result.Error)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "用户名或密码错误"})
 		return
 	}
 
-	// 验证密码 - 直接比较原文
-	if user.Password != loginData.Password {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+	// 检查用户是否被删除
+	if user.DeletedAt.Valid {
+		fmt.Printf("已删除用户尝试登录: %s\n", loginData.Username)
+		c.JSON(http.StatusForbidden, gin.H{"error": "该账号已被禁用"})
+		return
+	}
+
+	// 首先尝试验证密码是否已经是加密的
+	passwordValid := utils.CheckPassword(loginData.Password, user.Password)
+
+	// 如果密码验证失败，检查是否是明文密码
+	if !passwordValid && loginData.Password == user.Password {
+		// 密码是明文且匹配，更新为加密密码
+		hashedPassword, err := utils.HashPassword(loginData.Password)
+		if err != nil {
+			fmt.Printf("加密密码失败: %s, 错误: %v\n", loginData.Username, err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "服务器内部错误"})
+			return
+		}
+
+		// 更新用户密码
+		if err := database.DB.Model(&user).Update("password", hashedPassword).Error; err != nil {
+			fmt.Printf("更新加密密码失败: %s, 错误: %v\n", loginData.Username, err)
+			// 不返回错误，继续登录流程
+		}
+
+		passwordValid = true
+	}
+
+	if !passwordValid {
+		fmt.Printf("密码验证失败: %s\n", loginData.Username)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "用户名或密码错误"})
 		return
 	}
 
 	// 生成JWT token
 	token, err := utils.GenerateToken(user.ID, user.Username, user.Role)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		fmt.Printf("生成token失败: %s, 错误: %v\n", loginData.Username, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "生成登录凭证失败"})
 		return
 	}
 
 	// 更新最后登录时间
 	user.LastLoginAt = time.Now()
-	database.DB.Save(&user)
+	if err := database.DB.Save(&user).Error; err != nil {
+		fmt.Printf("更新最后登录时间失败: %s, 错误: %v\n", loginData.Username, err)
+	}
 
 	// 记录登录日志
 	log := models.Log{
@@ -97,7 +138,11 @@ func Login(c *gin.Context) {
 		IP:        c.ClientIP(),
 		Timestamp: time.Now(),
 	}
-	database.DB.Create(&log)
+	if err := database.DB.Create(&log).Error; err != nil {
+		fmt.Printf("创建登录日志失败: %s, 错误: %v\n", loginData.Username, err)
+	}
+
+	fmt.Printf("用户登录成功: %s\n", loginData.Username)
 
 	// 返回token和用户信息
 	c.JSON(http.StatusOK, gin.H{
@@ -301,4 +346,54 @@ func UpdateProfile(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, user)
+}
+
+// ChangePassword 修改用户密码
+func ChangePassword(c *gin.Context) {
+	// 从上下文中获取用户ID
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+		return
+	}
+
+	// 获取请求数据
+	var passwordData struct {
+		OldPassword string `json:"old_password" binding:"required"`
+		NewPassword string `json:"new_password" binding:"required,min=6"`
+	}
+
+	if err := c.ShouldBindJSON(&passwordData); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid password data"})
+		return
+	}
+
+	// 查询用户信息
+	var user models.User
+	if err := database.DB.First(&user, userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	// 验证原密码
+	if !utils.CheckPassword(passwordData.OldPassword, user.Password) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid old password"})
+		return
+	}
+
+	// 对新密码进行加密
+	hashedPassword, err := utils.HashPassword(passwordData.NewPassword)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
+		return
+	}
+
+	// 更新密码
+	user.Password = hashedPassword
+	if err := database.DB.Save(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update password"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Password updated successfully"})
 }

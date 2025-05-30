@@ -9,8 +9,7 @@
     <el-container>
       <el-header>
         <div class="header-right">
-          <span>{{ username }}</span>
-          <el-button type="text" @click="handleLogout">退出</el-button>
+          <user-profile />
         </div>
       </el-header>
       <el-main>
@@ -22,40 +21,20 @@
 
 <script>
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import SideMenu from '../components/SideMenu.vue'
-import axios from 'axios'
+import UserProfile from '../components/UserProfile.vue'
 
 export default {
   name: 'HomePage',
   components: {
-    SideMenu
+    SideMenu,
+    UserProfile
   },
   setup() {
-    const router = useRouter()
     const systemName = ref('系统名称')
-    const username = ref(localStorage.getItem('username') || '用户')
-
-    const handleLogout = async () => {
-      try {
-        const token = localStorage.getItem('token')
-        await axios.post('/api/logout', {}, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-        localStorage.removeItem('token')
-        localStorage.removeItem('username')
-        router.push('/login')
-      } catch (error) {
-        console.error('Logout error:', error)
-        ElMessage.error('退出失败')
-      }
-    }
 
     return {
-      systemName,
-      username,
-      handleLogout
+      systemName
     }
   }
 }
@@ -86,8 +65,8 @@ export default {
 }
 
 .el-header {
-  background-color: white;
-  border-bottom: 1px solid #ddd;
+  background-color: #fff;
+  border-bottom: 1px solid #dcdfe6;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -101,7 +80,7 @@ export default {
 }
 
 .el-main {
-  padding: 0;
   background-color: #f0f2f5;
+  padding: 20px;
 }
 </style>
