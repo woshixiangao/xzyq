@@ -90,6 +90,8 @@ func main() {
 		protected.POST("/object-classes", handlers.CreateObjectClass)
 		protected.PUT("/object-classes/:id", handlers.UpdateObjectClass)
 		protected.DELETE("/object-classes/:id", handlers.DeleteObjectClass)
+		protected.GET("/object-classes/:id/children", handlers.GetObjectClassChildren)
+		protected.POST("/object-classes/:id/children", handlers.CreateChildObjectClass)
 	}
 
 	// 管理员路由

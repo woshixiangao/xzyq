@@ -8,7 +8,11 @@
     <!-- 对象类列表 -->
     <el-table :data="objectClasses" v-loading="loading" style="width: 100%">
       <el-table-column prop="id" label="ID" width="80" />
-      <el-table-column prop="name" label="名称" width="150" />
+      <el-table-column prop="name" label="名称" width="150">
+        <template #default="{ row }">
+          <el-link type="primary" @click="goToDetail(row.id)">{{ row.name }}</el-link>
+        </template>
+      </el-table-column>
       <el-table-column prop="description" label="描述" show-overflow-tooltip />
       <el-table-column prop="organization.name" label="所属组织" width="150" />
       <el-table-column prop="created_by_user.username" label="创建人" width="120" />
@@ -60,10 +64,12 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import axios from 'axios'
+import { useRouter } from 'vue-router'
 
 export default {
   name: 'ObjectClassPage',
   setup() {
+    const router = useRouter()
     const loading = ref(false)
     const submitting = ref(false)
     const dialogVisible = ref(false)
@@ -182,6 +188,11 @@ export default {
       return new Date(date).toLocaleString()
     }
 
+    // 跳转到详情页
+    const goToDetail = (id) => {
+      router.push(`/object-classes/${id}`)
+    }
+
     onMounted(() => {
       fetchObjectClasses()
       fetchOrganizations()
@@ -201,7 +212,8 @@ export default {
       showEditDialog,
       handleSubmit,
       handleDelete,
-      formatDate
+      formatDate,
+      goToDetail,
     }
   }
 }

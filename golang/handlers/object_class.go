@@ -27,6 +27,7 @@ func GetObjectClass(c *gin.Context) {
 	var class models.ObjectClass
 
 	if err := database.DB.Preload("Organization").
+		Preload("Parent").
 		Preload("CreatedByUser").
 		First(&class, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "对象类不存在"})
@@ -34,6 +35,22 @@ func GetObjectClass(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, class)
+}
+
+// GetObjectClassChildren 获取对象类的子对象类列表
+func GetObjectClassChildren(c *gin.Context) {
+	id := c.Param("id")
+	var children []models.ObjectClass
+
+	if err := database.DB.Preload("Organization").
+		Preload("CreatedByUser").
+		Where("parent_id = ?", id).
+		Find(&children).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取子对象类列表失败"})
+		return
+	}
+
+	c.JSON(http.StatusOK, children)
 }
 
 // CreateObjectClass 创建对象类
@@ -66,6 +83,46 @@ func CreateObjectClass(c *gin.Context) {
 
 	// 重新获取完整的对象类信息
 	database.DB.Preload("Organization").
+		Preload("CreatedByUser").
+		First(&class, class.ID)
+
+	c.JSON(http.StatusCreated, class)
+}
+
+// CreateChildObjectClass 创建子对象类
+func CreateChildObjectClass(c *gin.Context) {
+	parentID := c.Param("id")
+	var parent models.ObjectClass
+	if err := database.DB.First(&parent, parentID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "父对象类不存在"})
+		return
+	}
+
+	var class models.ObjectClass
+	if err := c.ShouldBindJSON(&class); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的请求数据"})
+		return
+	}
+
+	// 获取当前用户ID
+	userID, _ := c.Get("userID")
+	class.CreatedBy = userID.(uint)
+
+	// 使用父对象类的组织ID
+	class.OrgID = parent.OrgID
+	// 设置父ID
+	parentIDUint := parent.ID
+	class.ParentID = &parentIDUint
+	class.UpdatedAt = time.Now()
+
+	if err := database.DB.Create(&class).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建子对象类失败"})
+		return
+	}
+
+	// 重新获取完整的对象类信息
+	database.DB.Preload("Organization").
+		Preload("Parent").
 		Preload("CreatedByUser").
 		First(&class, class.ID)
 
