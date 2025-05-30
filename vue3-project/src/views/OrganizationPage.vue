@@ -8,7 +8,17 @@
     <!-- 组织列表 -->
     <el-table :data="organizations" style="width: 100%">
       <el-table-column prop="id" label="ID" width="80" />
-      <el-table-column prop="name" label="组织名称" />
+      <el-table-column label="组织名称">
+        <template #default="{ row }">
+          <el-link type="primary" @click="goToDetail(row.id)">{{ row.name }}</el-link>
+        </template>
+      </el-table-column>
+      <el-table-column label="父级租户" width="180">
+        <template #default="{ row }">
+          <span v-if="row.parent_org">{{ row.parent_org.name }}</span>
+          <span v-else>-</span>
+        </template>
+      </el-table-column>
       <el-table-column prop="user_count" label="用户数量" width="100">
         <template #default="{ row }">
           <el-tag>{{ row.user_count }}</el-tag>
@@ -33,6 +43,17 @@
       <el-form :model="form" label-width="80px">
         <el-form-item label="组织名称">
           <el-input v-model="form.name" placeholder="请输入组织名称" />
+        </el-form-item>
+        <el-form-item label="父级租户">
+          <el-select v-model="form.parent_id" placeholder="请选择父级租户" clearable>
+            <el-option
+              v-for="org in allOrganizations"
+              :key="org.id"
+              :label="org.name"
+              :value="org.id"
+              :disabled="org.id === form.id"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="描述">
           <el-input
@@ -63,12 +84,14 @@ export default {
   setup() {
     const router = useRouter()
     const organizations = ref([])
+    const allOrganizations = ref([]) // 存储所有组织，用于父级租户选择
     const dialogVisible = ref(false)
     const dialogTitle = ref('')
     const form = ref({
       id: null,
       name: '',
-      description: ''
+      description: '',
+      parent_id: null
     })
 
     // 获取组织列表
@@ -91,22 +114,45 @@ export default {
       }
     }
 
+    // 获取所有组织列表（用于父级租户选择）
+    const fetchAllOrganizations = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        const response = await axios.get('/api/organizations/all', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+        allOrganizations.value = response.data
+      } catch (error) {
+        console.error('获取所有组织列表失败:', error)
+      }
+    }
+
     // 显示创建对话框
     const showCreateDialog = () => {
       form.value = {
         id: null,
         name: '',
-        description: ''
+        description: '',
+        parent_id: null
       }
       dialogTitle.value = '新建组织'
       dialogVisible.value = true
+      // 获取所有组织列表用于父级租户选择
+      fetchAllOrganizations()
     }
 
     // 显示编辑对话框
     const showEditDialog = (row) => {
-      form.value = { ...row }
+      form.value = { 
+        ...row,
+        parent_id: row.parent_org?.id || null
+      }
       dialogTitle.value = '编辑组织'
       dialogVisible.value = true
+      // 获取所有组织列表用于父级租户选择
+      fetchAllOrganizations()
     }
 
     // 提交表单
@@ -184,19 +230,26 @@ export default {
       }
     }
 
+    // 跳转到组织详情页
+    const goToDetail = (id) => {
+      router.push(`organizations/${id}`)
+    }
+
     onMounted(() => {
       fetchOrganizations()
     })
 
     return {
       organizations,
+      allOrganizations,
       dialogVisible,
       dialogTitle,
       form,
       showCreateDialog,
       showEditDialog,
       handleSubmit,
-      handleDelete
+      handleDelete,
+      goToDetail
     }
   }
 }

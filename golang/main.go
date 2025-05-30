@@ -76,7 +76,9 @@ func main() {
 
 		// 组织管理路由
 		protected.GET("/organizations", handlers.GetOrganizations)
+		protected.GET("/organizations/all", handlers.GetAllOrganizations)
 		protected.GET("/organizations/:id", handlers.GetOrganization)
+		protected.GET("/organizations/:id/users", handlers.GetOrganizationUsers)
 		protected.POST("/organizations", handlers.CreateOrganization)
 		protected.PUT("/organizations/:id", handlers.UpdateOrganization)
 		protected.DELETE("/organizations/:id", handlers.DeleteOrganization)

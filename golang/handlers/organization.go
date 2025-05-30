@@ -11,22 +11,30 @@ import (
 
 // GetOrganizations 获取所有组织
 func GetOrganizations(c *gin.Context) {
-	type OrgWithUserCount struct {
+	type OrgWithDetails struct {
 		models.Organization
-		UserCount int64 `json:"user_count"`
+		UserCount int64                `json:"user_count"`
+		ParentOrg *models.Organization `json:"parent_org,omitempty"`
 	}
 
-	var orgsWithCount []OrgWithUserCount
+	// 从上下文中获取当前用户ID
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "未授权的操作"})
+		return
+	}
+
+	var orgsWithDetails []OrgWithDetails
 	db := database.GetDB()
 
-	// 查询所有组织
+	// 查询当前用户创建的组织
 	var organizations []models.Organization
-	if err := db.Find(&organizations).Error; err != nil {
+	if err := db.Where("created_by = ?", userID).Find(&organizations).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取组织列表失败"})
 		return
 	}
 
-	// 为每个组织统计用户数量，包括软删除的用户
+	// 为每个组织获取详细信息
 	for _, org := range organizations {
 		var count int64
 		if err := db.Unscoped().Model(&models.User{}).Where("org_id = ?", org.ID).Count(&count).Error; err != nil {
@@ -34,13 +42,23 @@ func GetOrganizations(c *gin.Context) {
 			return
 		}
 
-		orgsWithCount = append(orgsWithCount, OrgWithUserCount{
+		details := OrgWithDetails{
 			Organization: org,
 			UserCount:    count,
-		})
+		}
+
+		// 如果有父组织ID，查询父组织信息
+		if org.ParentID != nil {
+			var parentOrg models.Organization
+			if err := db.First(&parentOrg, *org.ParentID).Error; err == nil {
+				details.ParentOrg = &parentOrg
+			}
+		}
+
+		orgsWithDetails = append(orgsWithDetails, details)
 	}
 
-	c.JSON(http.StatusOK, orgsWithCount)
+	c.JSON(http.StatusOK, orgsWithDetails)
 }
 
 // GetOrganization 获取单个组织
@@ -210,4 +228,40 @@ func DeleteOrganization(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": fmt.Sprintf("组织[%s]及其相关数据已成功删除", organization.Name),
 	})
+}
+
+// GetAllOrganizations 获取所有组织（用于父级租户选择）
+func GetAllOrganizations(c *gin.Context) {
+	var organizations []models.Organization
+	if err := database.DB.Find(&organizations).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取组织列表失败"})
+		return
+	}
+	c.JSON(http.StatusOK, organizations)
+}
+
+// GetOrganizationUsers 获取组织下的用户列表
+func GetOrganizationUsers(c *gin.Context) {
+	id := c.Param("id")
+
+	// 验证组织是否存在
+	var organization models.Organization
+	if err := database.DB.First(&organization, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "组织不存在"})
+		return
+	}
+
+	// 获取组织下的用户列表，包括软删除的用户
+	var users []models.User
+	if err := database.DB.Unscoped().Where("org_id = ?", id).Find(&users).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取用户列表失败"})
+		return
+	}
+
+	// 如果没有找到用户，返回空数组而不是 null
+	if users == nil {
+		users = make([]models.User, 0)
+	}
+
+	c.JSON(http.StatusOK, users)
 }

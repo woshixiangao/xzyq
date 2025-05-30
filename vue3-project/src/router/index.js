@@ -20,11 +20,17 @@ const routes = [
         name: 'UserPage',
         component: UserPage,
         meta: { requiresAuth: true }
-      },  // 这里缺少了逗号
+      },
       {
-        path: '/organizations',
+        path: 'organizations',
         name: 'Organizations',
         component: () => import('../views/OrganizationPage.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'organizations/:id',
+        name: 'OrganizationDetail',
+        component: () => import('../views/OrganizationDetailPage.vue'),
         meta: { requiresAuth: true }
       }
     ]
